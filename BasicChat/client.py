@@ -3,22 +3,26 @@
 import socket
 import sys
 import threading
+from util import Util
 
 def listen(client):
     while True:
-        data = client.recv(1024).strip()
+        data = client.recv(BUFSIZE).strip()
         print(data.decode("utf-8"))
 
         if not data:
             break
 
-HOST = "localhost"
-PORT = 8888
-ADDR = (HOST, PORT)
+util = Util()
 
 if len(sys.argv) > 1:
-    print("proc arg")
-    pass
+    if util.parseOptions(sys.argv) != 0:
+        sys.exit(0)
+
+HOST = util.ADDR
+PORT = util.PORT
+ADDR = (HOST, PORT)
+BUFSIZE = util.BUFSIZE
 
 print("Your ID : ", end="")
 ID = input()
@@ -38,6 +42,8 @@ while True:
     try:
         data = sys.stdin.readline()
         data = data.encode("utf-8")
+        if len(data) > BUFSIZE:
+            data = data[:BUFSIZE]
         res = client.send(data)
     except KeyboardInterrupt:
         break

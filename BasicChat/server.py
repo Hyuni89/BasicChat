@@ -3,17 +3,18 @@
 import threading
 import socket
 import sys
+from util import Util
 
 def handleUsers(client):
     global userCount, clientList
 
-    ID = client.recv(1024).strip()
+    ID = client.recv(BUFSIZE).strip()
     ID = ID.decode("utf-8")
     addingClient(ID, client, True)
     broadCast(ID, "has been joined!!!")
 
     while True:
-        data = client.recv(1024).strip()
+        data = client.recv(BUFSIZE).strip()
         if not data:
             break
         data = data.decode("utf-8")
@@ -45,16 +46,19 @@ def broadCast(ID, string):
     for client in clientList.values():
         res = client.send(data)
 
-HOST = "localhost"
-PORT = 8888
+util = Util()
+
+if len(sys.argv) > 1:
+    if util.parseOptions(sys.argv) != 0:
+        sys.exit(0)
+
+HOST = util.ADDR
+PORT = util.PORT
 ADDR = (HOST, PORT)
+BUFSIZE = util.BUFSIZE
 lock = threading.Lock()
 userCount = 0
 clientList = dict()
-
-if len(sys.argv) > 1:
-    print("proc arg")
-    pass
 
 server = socket.socket()
 server.bind(ADDR)
