@@ -3,15 +3,13 @@
 import threading
 import socket
 import sys
+import struct
 from util import Util
 
 def handleUsers(client):
     global userCount, clientList
 
-    ID = client.recv(BUFSIZE).strip()
-    ID = ID.decode("utf-8")
-    addingClient(ID, client, True)
-    broadCast(ID, "has been joined!!!")
+    ID = addingClient(client, True)
 
     while True:
         data = client.recv(BUFSIZE).strip()
@@ -21,29 +19,51 @@ def handleUsers(client):
         print(ID, data)
         broadCast(ID, data)
 
-    addingClient(ID, client, False)
-    broadCast(ID, "has been leaved!!!")
+    addingClient(client, False)
 
-def addingClient(ID, client, flag):
+def addingClient(client, flag):
     global lock, userCount, clientList
 
+    ID = ""
     lock.acquire()
     if flag is True:
-        if ID not in clientList:
-            userCount += 1
-            clientList[ID] = client
+        ID = verifyID(client)
+        broadCast(ID, "has been joined!!!")
     else:
-        if ID in clientList:
+        if client in clientList:
             userCount -= 1
-            del clientList[ID]
+            broadCast(clientList[client], "has been leaved!!!")
+            del clientList[client]
+
+    print("Member Count %d" % len(clientList))
     lock.release()
+
+    return ID
+
+def verifyID(client):
+    global clientList, userCount
+
+    while True:
+        ID = client.recv(BUFSIZE).strip()
+        ID = ID.decode("utf-8")
+
+        if ID not in clientList.values():
+            break
+
+        client.send(struct.pack("i", -1))
+
+    client.send(struct.pack("i", 0))
+    userCount += 1
+    clientList[client] = ID
+
+    return ID
 
 def broadCast(ID, string):
     global clientList
     data = "[" + ID + "] " + string
     data = data.encode("utf-8")
 
-    for client in clientList.values():
+    for client in clientList.keys():
         res = client.send(data)
 
 util = Util()
@@ -73,7 +93,7 @@ while True:
             msg = "Server Closed... Sorry!"
             broadCast("", msg.encode("utf-8"))
 
-            for c in clientList.values():
+            for c in clientList.keys():
                 c.close()
         break
 

@@ -3,6 +3,7 @@
 import socket
 import sys
 import threading
+import struct
 from util import Util
 
 def listen(client):
@@ -12,6 +13,22 @@ def listen(client):
 
         if not data:
             break
+
+def verifyID(client):
+    while True:
+        print("Your ID : ", end="")
+        ID = input()
+
+        if len(ID) > 0xFF:
+            ID = ID[:0xFF]
+
+        client.send(ID.encode("utf-8"))
+        data = client.recv(BUFSIZE)
+
+        if struct.unpack("i", data[:4])[0] == 0:
+            break
+
+        print("ID already exist. Try again")
 
 util = Util()
 
@@ -24,19 +41,15 @@ PORT = util.PORT
 ADDR = (HOST, PORT)
 BUFSIZE = util.BUFSIZE
 
-print("Your ID : ", end="")
-ID = input()
-if len(ID) > 0xFF:
-    ID = ID[:0xFF]
-
 client = socket.socket()
 res = client.connect(ADDR)
+
+verifyID(client)
+print("Connected!")
 
 t = threading.Thread(target=listen, args=(client,))
 t.daemon = True
 t.start()
-
-client.send(ID.encode("utf-8"))
 
 while True:
     try:
